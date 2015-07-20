@@ -81,12 +81,12 @@ jumplink.cms.service('ContentService', function ($rootScope, $log, $sailsSocket,
   }
 
   var create = function(data) {
+    if(typeof(data) === 'undefined' || !data.page )$log.error("Page not set.");
 
     if(!data || !data.content) data.content = "";
     if(!data || !data.title) data.title = "";
     if(!data || !data.name) data.name = "";
     if(!data || !data.type) data.type = "dynamic";
-    if(!data || !data.page) cb("Page not set.")
 
     return data;
   }
@@ -201,6 +201,12 @@ jumplink.cms.service('ContentService', function ($rootScope, $log, $sailsSocket,
       if(angular.isUndefined(content.name) || content.name === '' || content.name === null)
         content.name = generateName(content.title);
 
+      if(angular.isUndefined(content.title) || content.title === '' || content.title === null)
+        content.title = generateName(content.name);
+
+      if(angular.isUndefined(content.position) || content.position === '' || content.position === null)
+        content.position = 1;
+
       if(!content.type || content.type === "") {
         $log.warn("Fix content type not set, set it to dynamic");
         content.type = 'fix';
@@ -235,6 +241,7 @@ jumplink.cms.service('ContentService', function ($rootScope, $log, $sailsSocket,
         if(cb) cb(err);
         else return err;
       }
+      $log.debug("[ContentService:saveOne]", content);
       $sailsSocket.put('/content/replace', content).success(function(data, status, headers, config) {
         //- $log.debug ("save response from /content/replaceall", data, status, headers, config);
         if(data != null && typeof(data) !== "undefined") {
@@ -311,10 +318,14 @@ jumplink.cms.service('ContentService', function ($rootScope, $log, $sailsSocket,
         if(cb) cb(null, data.data);
         else return data.data;
       }
-    }, function error (resp){
-      $log.error(errors[0], resp);
-      if(cb) cb(errors[0], resp);
-      else return resp;
+    }, function error (data){
+      $log.error(errors[0], data);
+
+      // fallback if not found create an empty content
+      data.data = fix(create({page:page, name:name, type:type})); 
+
+      if(cb) cb(errors[0], data);
+      else return data.data;
     });
   };
 
@@ -346,10 +357,14 @@ jumplink.cms.service('ContentService', function ($rootScope, $log, $sailsSocket,
       } else {
         return data.data;
       }
-    }, function error (resp){
-      $log.error(errors[0], resp);
-      if(cb) cb(errors[0], resp);
-      else return resp;
+    }, function error (data){
+      $log.error(errors[0], data);
+
+      // fallback if not found create an empty content
+      data.data = [fix(create({page:page, type:type}))]; 
+
+      if(cb) cb(errors[0], data.data);
+      else return data.data;
     });
   };
 
